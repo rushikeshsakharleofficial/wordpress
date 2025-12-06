@@ -3,27 +3,23 @@ set -e
 
 # Handle multiple domains in SERVER_NAME
 # Split SERVER_NAME into array
-# Handle multiple domains in SERVER_NAME
-ORIG_SERVER_NAME="$SERVER_NAME"
+IFS=' ' read -r -a SERVERS <<< "$SERVER_NAME" || true
 
-# First domain is the actual ServerName (chars up to first space)
-export APACHE_SERVER_NAME="${ORIG_SERVER_NAME%% *}"
+# First domain is the actual ServerName
+export SERVER_NAME="${SERVERS[0]}"
 
 # The rest (plus existing SERVER_ALIAS) become ServerAlias
-# If there is a space, there are aliases
-if [[ "$ORIG_SERVER_NAME" == *" "* ]]; then
-    ALIASES="${ORIG_SERVER_NAME#* }"
+if [ "${#SERVERS[@]}" -gt 1 ]; then
+    ALIASES="${SERVERS[@]:1}"
     if [ -n "$SERVER_ALIAS" ]; then
-        export APACHE_SERVER_ALIAS="$ALIASES $SERVER_ALIAS"
+        export SERVER_ALIAS="$ALIASES $SERVER_ALIAS"
     else
-        export APACHE_SERVER_ALIAS="$ALIASES"
+        export SERVER_ALIAS="$ALIASES"
     fi
-else
-    export APACHE_SERVER_ALIAS="$SERVER_ALIAS"
 fi
 
 # Substitute environment variables in Apache config
-envsubst '${APACHE_SERVER_NAME} ${APACHE_SERVER_ALIAS}' < /etc/apache2/sites-available/000-default.conf.template > /etc/apache2/sites-available/000-default.conf
+envsubst '${SERVER_NAME} ${SERVER_ALIAS}' < /etc/apache2/sites-available/000-default.conf.template > /etc/apache2/sites-available/000-default.conf
 
 # Start Redis
 service redis-server start

@@ -1,57 +1,36 @@
 services:
-  db:
-    image: mysql:8.0
-    container_name: wordpress_db
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_DATABASE: wordpress
-      MYSQL_USER: wordpress
-      MYSQL_PASSWORD: password
-    volumes:
-      - db_data:/var/lib/mysql
-    networks:
-      private:
-        ipv4_address: 10.10.11.10
-
-  wordpress:
-    image: wordpress:latest
-    container_name: wordpress_app
+  wordpress-linuxhardened:
+    image: linuxhardened/wordpress-linuxhardened:latest
+    container_name: wordpress-linuxhardened
     restart: always
     ports:
       - "80:80"
     environment:
-      WORDPRESS_DB_HOST: db
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: password
+      # WordPress connects to localhost DB/Redis in this setup
+      WORDPRESS_DB_HOST: 127.0.0.1
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: password
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_CONFIG_EXTRA: |
-        define('WP_REDIS_DIR', '/var/cache/redis');
-        define('WP_REDIS_HOST', 'redis');
+        define('WP_REDIS_HOST', '127.0.0.1');
         define('WP_REDIS_PORT', 6379);
+        // Reverse Proxy SSL Fix
+        if (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+            $_SERVER['HTTPS'] = 'on';
+        }
     volumes:
       - wp_data:/var/www/html
-      - ./apache-site.conf:/etc/apache2/sites-enabled/000-default.conf
-    depends_on:
-      - db
-      - redis
+      - db_data:/var/lib/mysql
     networks:
-      private:
-        ipv4_address: 10.10.11.11
       public:
         ipv4_address: 10.10.10.10
 
-  redis:
-    image: redis:alpine
-    container_name: wordpress_redis
-    restart: always
-    networks:
-      private:
-        ipv4_address: 10.10.11.12
-
 volumes:
-  db_data:
   wp_data:
+  db_data:
 
 networks:
   public:
@@ -59,8 +38,3 @@ networks:
     ipam:
       config:
         - subnet: 10.10.10.0/24
-  private:
-    internal: true
-    ipam:
-      config:
-        - subnet: 10.10.11.0/24
