@@ -294,8 +294,9 @@ class GAKS_Admin {
         $sanitized['client_json'] = $input['client_json'] ?? '';
         $sanitized['refresh_token'] = sanitize_text_field($input['refresh_token'] ?? '');
         $sanitized['developer_token'] = sanitize_text_field($input['developer_token'] ?? '');
-        $sanitized['customer_id'] = preg_replace('/[^0-9]/', '', $input['customer_id'] ?? '');
-        $sanitized['login_customer_id'] = preg_replace('/[^0-9]/', '', $input['login_customer_id'] ?? '');
+        // Keep dashes for display, API client strips them when needed
+        $sanitized['customer_id'] = sanitize_text_field($input['customer_id'] ?? '');
+        $sanitized['login_customer_id'] = sanitize_text_field($input['login_customer_id'] ?? '');
         $sanitized['location_id'] = sanitize_text_field($input['location_id'] ?? '2840');
         $sanitized['language_id'] = sanitize_text_field($input['language_id'] ?? '1000');
         
