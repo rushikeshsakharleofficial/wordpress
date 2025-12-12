@@ -142,17 +142,29 @@ class GAKS_API_Client {
             $headers['login-customer-id'] = preg_replace('/[^0-9]/', '', $this->settings['login_customer_id']);
         }
         
+        // Debug logging
+        error_log('=== GAKS Debug Start ===');
+        error_log('URL: ' . $url);
+        error_log('Customer ID: ' . $customer_id);
+        error_log('Login Customer ID: ' . ($this->settings['login_customer_id'] ?? 'not set'));
+        error_log('Developer Token: ' . substr($this->settings['developer_token'], 0, 10) . '...');
+        
         $response = wp_remote_get($url, array('headers' => $headers, 'timeout' => 30));
-        if (is_wp_error($response)) return $response;
+        if (is_wp_error($response)) {
+            error_log('WP Error: ' . $response->get_error_message());
+            error_log('=== GAKS Debug End ===');
+            return $response;
+        }
         
         $status_code = wp_remote_retrieve_response_code($response);
         $body = json_decode(wp_remote_retrieve_body($response), true);
         
-        error_log('GAKS Test Connection - Status: ' . $status_code);
-        error_log('GAKS Test Connection - Response: ' . print_r($body, true));
+        error_log('HTTP Status: ' . $status_code);
+        error_log('Response: ' . wp_remote_retrieve_body($response));
+        error_log('=== GAKS Debug End ===');
         
         if ($status_code >= 400) {
-            $error_msg = 'Connection failed (HTTP ' . $status_code . ')';
+            $error_msg = 'HTTP ' . $status_code . ' - Customer ID: ' . $customer_id;
             if (isset($body['error']['message'])) {
                 $error_msg = $body['error']['message'];
             } elseif (isset($body['error']['details'][0]['errors'][0]['message'])) {
