@@ -49,13 +49,21 @@ class GAKS_API_Client {
         if (is_wp_error($response)) return $response;
         
         $body = json_decode(wp_remote_retrieve_body($response), true);
+        $status = wp_remote_retrieve_response_code($response);
         
         if (isset($body['error'])) {
-            return new WP_Error('oauth_error', sprintf(__('OAuth Error: %s', 'google-ads-keyword-suggestions'), $body['error_description'] ?? $body['error']));
+            $error_msg = $body['error'];
+            if (isset($body['error_description'])) {
+                $error_msg .= ': ' . $body['error_description'];
+            }
+            // Log for debugging
+            error_log('GAKS OAuth Error: ' . print_r($body, true));
+            return new WP_Error('oauth_error', sprintf(__('OAuth Error: %s', 'google-ads-keyword-suggestions'), $error_msg));
         }
         
         if (!isset($body['access_token'])) {
-            return new WP_Error('invalid_response', __('Invalid response from Google.', 'google-ads-keyword-suggestions'));
+            error_log('GAKS Invalid Response: ' . print_r($body, true));
+            return new WP_Error('invalid_response', __('Invalid response from Google. Status: ', 'google-ads-keyword-suggestions') . $status);
         }
         
         set_transient('gaks_access_token', $body['access_token'], 3000);
