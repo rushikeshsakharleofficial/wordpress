@@ -146,9 +146,19 @@ class GAKS_API_Client {
         if (is_wp_error($response)) return $response;
         
         $status_code = wp_remote_retrieve_response_code($response);
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        
+        error_log('GAKS Test Connection - Status: ' . $status_code);
+        error_log('GAKS Test Connection - Response: ' . print_r($body, true));
+        
         if ($status_code >= 400) {
-            $body = json_decode(wp_remote_retrieve_body($response), true);
-            return new WP_Error('connection_failed', $body['error']['message'] ?? __('Connection failed.', 'google-ads-keyword-suggestions'));
+            $error_msg = 'Connection failed (HTTP ' . $status_code . ')';
+            if (isset($body['error']['message'])) {
+                $error_msg = $body['error']['message'];
+            } elseif (isset($body['error']['details'][0]['errors'][0]['message'])) {
+                $error_msg = $body['error']['details'][0]['errors'][0]['message'];
+            }
+            return new WP_Error('connection_failed', $error_msg);
         }
         
         return true;
